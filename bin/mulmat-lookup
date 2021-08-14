@@ -5,23 +5,12 @@ __copyright__ = "Copyright (C) 2021  Martin Blais"
 __license__ = "Apache 2.0"
 
 import logging
-import shelve
-import subprocess
-import os
-import time
 import re
-import itertools
-import datetime
-import pickle
-import tempfile
 import json
-import pprint
-from urllib.request import urlretrieve
 from os import path
-from typing import Sequence, Optional
+from typing import Optional
 
 import click
-from petl import Table
 import petl
 
 
