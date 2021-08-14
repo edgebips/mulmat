@@ -9,52 +9,41 @@ from typing import Tuple
 from johnny.base import config as configlib
 
 
-# Standard equity option contract size.
-OPTION_CONTRACT_SIZE = 100
-
 # NOTE(blais): If you need a CME or CBOE product that is not here, please send
 # me a patch to add in the multiplier. These just happen to be the ones I've
 # needed in the past.
-MULTIPLIERS = {
-    # Indices : S&P 500
+
+
+# Standard equity option contract size.
+# TODO(blais): Rename to EQUITY_OPTION_CSIZE
+OPTION_CONTRACT_SIZE = 100
+
+
+# Multipliers for CME products.
+CME_MULTIPLIERS = {
+    # Equity indices
     '/ES'     : 50,
     '/MES'    : 5,
-    'SPX'     : 100,
-
-    # Indices : Nasdaq 100
     '/NQ'     : 20,
     '/MNQ'    : 2,
-    'NDX'     : 100,
-
-    # Indices : Russell 2000
     '/RTY'    : 50,
     '/M2K'    : 5,
-    'RUT'     : 100,
-
-    # Indices : Dow Jones
     '/YM'     : 5,
     '/MYM'    : 0.5,
-    'DJI'     : 100,
 
     # Volatility
     '/VX'     : 1000,
-    'VIX'     : 100,
-    'RVX'     : 1000,
-    'VXN'     : 1000,
-    'VXD'     : 1000,
 
     # FX
-    '/6E'     : 125_000,
-    '/6J'     : 12_500_000,
     '/6A'     : 100_000,
     '/6C'     : 100_000,
     '/6B'     : 62_500,
-    '/SFX'    : 100,
+    '/6E'     : 125_000,
+    '/6J'     : 12_500_000,
 
     # Energy
     '/CL'     : 1000,
     '/NG'     : 10_000,
-    '/SMO'    : 100,
 
     # Metals
     '/GC'     : 100,
@@ -62,10 +51,9 @@ MULTIPLIERS = {
     '/SI'     : 5000,
     '/SIL'    : 1000,
     '/HG'     : 25000,
-    #'/QC'    : 12500,
+    '/QC'    : 12500,
     '/PA'     : 100,
     '/PL'     : 50,
-    '/SPRE'   : 100,
 
     # Rates
     '/ZQ'     : 4167,
@@ -74,9 +62,6 @@ MULTIPLIERS = {
     '/ZF'     : 1000,
     '/ZN'     : 1000,
     '/ZB'     : 1000,
-    '/S2Y'    : 100,
-    '/S10Y'   : 100,
-    '/S30Y'   : 100,
 
     # Agricultural
     '/ZC'     : 50,
@@ -86,12 +71,42 @@ MULTIPLIERS = {
     # Livestock
     '/HE'     : 400,
     '/LE'     : 400,
-
-    # Small exchange unrelated
-    '/SM75'   : 100,
-    '/STIX'   : 100,
-    '/S420'   : 100
 }
+
+# Multipliers for CBOE products.
+CBOE_MULTIPLIERS = {
+    # Indices
+    'SPX'     : 100,
+    'NDX'     : 100,
+    'RUT'     : 100,
+    'DJI'     : 100,
+
+    # Volatility
+    'VIX'     : 100,
+    'RVX'     : 1000,
+    'VXN'     : 1000,
+    'VXD'     : 1000,
+}
+
+# Multipliers for SmallExchange products.
+SMALLEXCHANGE_MULTIPLIERS = {
+    '/S10Y'   : 100,
+    '/S2Y'    : 100,
+    '/S30Y'   : 100,
+    '/S420'   : 100,
+    '/SFX'    : 100,
+    '/SM75'   : 100,
+    '/SMO'    : 100,
+    '/SPRE'   : 100,
+    '/STIX'   : 100,
+}
+
+
+MULTIPLIERS = {name: multiplier
+               for mulmap in [CME_MULTIPLIERS,
+                              CBOE_MULTIPLIERS,
+                              SMALLEXCHANGE_MULTIPLIERS]
+               for name, multiplier in mulmap.items()}
 
 
 class FutOptMonthMapper:

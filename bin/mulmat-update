@@ -5,38 +5,142 @@ __copyright__ = "Copyright (C) 2021  Martin Blais"
 __license__ = "Apache 2.0"
 
 import logging
+import shelve
 import subprocess
 import os
 import time
+import itertools
 import datetime
+import pickle
+import tempfile
 from urllib.request import urlretrieve
 from os import path
+from typing import Sequence
 
 import click
 from selenium import webdriver
 from selenium.webdriver.chrome import options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait as wait
 from selenium.webdriver.support import expected_conditions as EC
+from petl import Table
+import petl
+
+from mulmat import multipliers
 
 
 URL = 'https://www.cmegroup.com/tools-information/quikstrike/product-expiration-browser.html'
 
 
-def fetch_expirations(product_names: set[set]) -> Table:
-    """Fetch expirations for a subset of futures products."""
+def fetch_expirations(destination_dir: str, headless: bool) -> Table:
+    """Fetch expirations for a subset of futures products to the given database.
+    Overrides prior entries if they exist.
+    The database is keyed by (contract-type, symbol).
+    """
 
+    with tempfile.TemporaryDirectory(prefix='mulmat.', dir='/home/blais') as tmpdir:
+        logging.info(f"Storing temporary files to {tmpdir}")
 
+        # Create driver.
+        opts = options.Options()
+        opts.headless = headless
+        opts.prompt_for_download = False
+        prefs = {
+            # Allow multiple downloads; disable the corresponding popup.
+            "profile.default_content_setting_values.automatic_downloads": 1,
+            "default_content_settings.multiple-automatic-downloads": 1,
 
+            # Set the download directory.
+            "download.default_directory": tmpdir,
+        }
+        opts.add_experimental_option("prefs", prefs)
+        driver = webdriver.Chrome(executable_path="chromedriver", options=opts)
+
+        # Open the page and click away the "accept cookies" button
+        # (id:pardotCookieButton).
+        driver.get(URL)
+        accept = driver.find_element(By.XPATH, '//a[text()="Accept"]')
+        accept.click()
+
+        # Find the iframe and switch to it.
+        iframe = driver.find_element(By.TAG_NAME, 'iframe')
+        iframe_id = iframe.get_attribute('id')
+        wait(driver, 10).until(EC.frame_to_be_available_and_switch_to_it(iframe_id))
+
+        # Find the tabs, and iterate through them.
+        ul = driver.find_element(By.CLASS_NAME, 'cme-tabs')
+        titles = [a.get_attribute('title') for a in ul.find_elements(By.TAG_NAME, 'a')]
+        tab_filenames = []
+        for title in titles:
+            # TODO(blais): Make those unique and temporary named.
+            tab_filename = f"{destination_dir}/mulmat-{title}.csv"
+            tab_filenames.append(tab_filename)
+            if path.exists(tab_filename):
+                logging.info(f'File {tab_filename} already exists; skipping')
+                continue
+
+            # Select the tab.
+            ul = driver.find_element(By.CLASS_NAME, 'cme-tabs')
+            anc = ul.find_element(By.XPATH, f'//a[@title="{title}"]')
+            anc.click()
+            time.sleep(1)
+            logging.info(f'Processing tab: "{title}"')
+
+            # Find the Actions menu; select the export item in the hidden popup
+            # submenu. Note: We may be able to get away with the Actions menu.
+            action = driver.find_element(By.XPATH, '//a[@title="Actions"]')
+            action.click()
+            time.sleep(1)
+            popup = driver.find_element(By.CLASS_NAME, 'expirationbar-popup')
+            export = popup.find_element(By.XPATH, '//div[text()="Export Expirations"]')
+            export.click()
+
+            # Wait for the file to be downloaded.
+            while True:
+                filenames = [fn for fn in os.listdir(tmpdir)
+                             if not fn.endswith('.crdownload')]
+                if filenames:
+                    break
+            assert len(filenames) == 1
+            filename = path.join(tmpdir, filenames[0])
+
+            # Move it somewhere persistent until the end of this function.
+            os.rename(filename, tab_filename)
+
+            # Remove the file.
+            logging.info(f'Done with "{title}"')
+
+        return tab_filenames
 
 
 @click.command()
-@click.option('--headless/--no-headless', default=True)
-def main(headless: bool):
+@click.option('--headless/--no-headless', default=False)
+@click.argument('old-database')
+@click.argument('new-database')
+def main(old_database: str, new_database: str, headless: bool):
     logging.basicConfig(level=logging.INFO, format='%(levelname)-8s: %(message)s')
 
-    logging.info("Fetching new expirations.")
-    x = fetch_expirations()
+    logging.info("Read prior database of expirations.")
+    keyfields = ['Contract Type', 'Symbol']
+    expirations = petl.fromcsv(old_database) if path.exists(old_database) else petl.empty()
+
+    with tempfile.TemporaryDirectory(prefix='mulmat.') as tmpdir:
+        logging.info("Fetching new expirations.")
+        filenames = fetch_expirations(tmpdir, headless)
+        tables = [petl.fromcsv(filename) for filename in filenames]
+        new_expirations = petl.cat(*tables)
+
+        logging.info("Override old values from the original db.")
+        expirations_dict = expirations.lookupone(keyfields)
+        for rec in new_expirations.records():
+            key = (rec['Contract Type'], rec['Symbol'])
+            expirations_dict[key] = tuple(rec)
+        new_expirations = (petl.wrap(itertools.chain([petl.header(expirations)],
+                                                     expirations_dict.values()))
+                           .sort(keyfields))
+
+        logging.info("Write out the new file (for comparison).")
+        new_expirations.tocsv(new_database)
 
 
 if __name__ == '__main__':
