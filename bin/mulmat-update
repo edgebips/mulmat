@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+"""Download new futures expirations and update our local file database.
+"""
+__copyright__ = "Copyright (C) 2021  Martin Blais"
+__license__ = "Apache 2.0"
+
+import logging
+import subprocess
+import os
+import time
+import datetime
+from urllib.request import urlretrieve
+from os import path
+
+import click
+from selenium import webdriver
+from selenium.webdriver.chrome import options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+
+URL = 'https://www.cmegroup.com/tools-information/quikstrike/product-expiration-browser.html'
+
+
+def fetch_expirations(product_names: set[set]) -> Table:
+    """Fetch expirations for a subset of futures products."""
+
+
+
+
+
+@click.command()
+@click.option('--headless/--no-headless', default=True)
+def main(headless: bool):
+    logging.basicConfig(level=logging.INFO, format='%(levelname)-8s: %(message)s')
+
+    logging.info("Fetching new expirations.")
+    x = fetch_expirations()
+
+
+if __name__ == '__main__':
+    main()
