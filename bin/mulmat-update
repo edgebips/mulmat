@@ -26,8 +26,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from petl import Table
 import petl
 
-from mulmat import multipliers
-
 
 URL = 'https://www.cmegroup.com/tools-information/quikstrike/product-expiration-browser.html'
 

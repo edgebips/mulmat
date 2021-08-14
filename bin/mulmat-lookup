@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+"""Look up particular contract names from the database.
+"""
+__copyright__ = "Copyright (C) 2021  Martin Blais"
+__license__ = "Apache 2.0"
+
+import logging
+import shelve
+import subprocess
+import os
+import time
+import re
+import itertools
+import datetime
+import pickle
+import tempfile
+import json
+import pprint
+from urllib.request import urlretrieve
+from os import path
+from typing import Sequence, Optional
+
+import click
+from petl import Table
+import petl
+
+
+@click.command()
+@click.option('--database', type=click.Path(exists=True), help="Database filename")
+@click.argument('symbol')
+@click.option('--contract-type')
+def main(database: Optional[str], symbol: str, contract_type: Optional[str]):
+    # Establish defaults.
+    if symbol.strip() is None:
+        logging.fatal(f"Invalid symbol '{symbol}'")
+        return
+    if contract_type is None:
+        contract_type = 'Option'
+    if database is None:
+        root = path.dirname(path.dirname(__file__))
+        database = f"{root}/data/cme-expirations.csv"
+
+    # Support decade (strip it).
+    if re.fullmatch(r'.*2\d', symbol):
+        symbol = symbol[:-2] + symbol[-1:]
+
+    # Read the prior database and index.
+    expirations = petl.fromcsv(database)
+    keyfields = ['Contract Type', 'Symbol']
+    expdict = expirations.dictlookupone(keyfields)
+
+    # Lookup the value from the in-memory database.
+    key = (contract_type, symbol)
+    row = expdict.get(key)
+    if row is None:
+        logging.error(f"Key '{key}' not found")
+        return
+
+    # Print out results nicely.
+    print(json.dumps(row, indent=2))
+
+
+if __name__ == '__main__':
+    main()
