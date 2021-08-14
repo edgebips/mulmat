@@ -29,6 +29,10 @@ def main(database: Optional[str], symbol: str, contract_type: Optional[str]):
         root = path.dirname(path.dirname(__file__))
         database = f"{root}/data/cme-expirations.csv"
 
+    # Support leading slash (strip it).
+    if symbol.startswith('/'):
+        symbol = symbol[1:]
+
     # Support decade (strip it).
     if re.fullmatch(r'.*2\d', symbol):
         symbol = symbol[:-2] + symbol[-1:]

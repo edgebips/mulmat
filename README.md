@@ -48,12 +48,11 @@ You lookup a name like this:
       "Contract Type": "Option"
     }
 
-It also supports TOS-style expirations with the decade, e.g.:
-
-    $ mulmat-lookup LOX1
-
-(Most relevant because it's really that platform which is not providing us with
-this information in the first place other than it being rendered in the UI.)
+It also supports TOS-style expirations with the decade, e.g., `LOX21` and a
+leading slash, e.g. `/R3EX1`. (This is relevant because it's really that
+particular platform which is not providing us with this information in the first
+place other than it being rendered in the UI which uses decades in the contract
+names.)
 
 ## License
 
