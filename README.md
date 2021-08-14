@@ -61,3 +61,7 @@ This project is under the Apache license.
 ## Credits
 
 Author: Martin Blais <blais@furius.ca>
+
+(Note: The project is named as such as a token of appreciation of Pete Mulmat, a
+futures expert previously at the CME and currently a commentator on futures
+markets and show host on the Tastytrade network.)
