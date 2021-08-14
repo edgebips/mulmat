@@ -17,7 +17,7 @@ import petl
 @click.command()
 @click.option('--database', type=click.Path(exists=True), help="Database filename")
 @click.argument('symbol')
-@click.option('--contract-type')
+@click.option('--contract-type', '-t', help="Type of contract")
 def main(database: Optional[str], symbol: str, contract_type: Optional[str]):
     # Establish defaults.
     if symbol.strip() is None:

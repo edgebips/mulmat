@@ -1,6 +1,5 @@
 """Load information about futures contracts, in particular, the multipliers.
 """
-
 __copyright__ = "Copyright (C) 2021  Martin Blais"
 __license__ = "GNU GPLv2"
 
