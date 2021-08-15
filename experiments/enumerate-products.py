@@ -101,11 +101,8 @@ def list_months(options: Table):
 @click.option('--products', '-p', is_flag=True)
 @click.option('--months', '-m', is_flag=True)
 def main(database: Optional[str], products: bool, months: bool):
-    # Read the database.
-    if database is None:
-        root = path.dirname(path.dirname(__file__))
-        database = f"{root}/data/cme-expirations.csv"
-    expirations = petl.fromcsv(database)
+    expirations = mulmat.read_cme_database(database)
+
     options = (expirations
                .selecteq('Contract Type', 'Option')
                .cut('Symbol', 'Underlying'))

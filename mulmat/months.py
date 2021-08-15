@@ -9,6 +9,8 @@ __license__ = "GNU GPLv2"
 #   (option-product, option-month)
 # to
 #   (future-product, future-month, year-offset)
+# This can be used to figure out the underlying's name, month and year from a
+# futures option code.
 MONTHS = {
     ('12C', 'Z'): ('QC2', 'Z', 0),
     ('12K', 'N'): ('KNS', 'N', 0),

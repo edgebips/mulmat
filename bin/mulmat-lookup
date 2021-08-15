@@ -13,6 +13,8 @@ from typing import Optional
 import click
 import petl
 
+import mulmat
+
 
 @click.command()
 @click.option('--database', type=click.Path(exists=True), help="Database filename")
@@ -25,9 +27,6 @@ def main(database: Optional[str], symbol: str, contract_type: Optional[str]):
         return
     if contract_type is None:
         contract_type = 'Option'
-    if database is None:
-        root = path.dirname(path.dirname(__file__))
-        database = f"{root}/data/cme-expirations.csv"
 
     # Support leading slash (strip it).
     if symbol.startswith('/'):
@@ -38,7 +37,7 @@ def main(database: Optional[str], symbol: str, contract_type: Optional[str]):
         symbol = symbol[:-2] + symbol[-1:]
 
     # Read the prior database and index.
-    expirations = petl.fromcsv(database)
+    expirations = mulmat.read_cme_database(database)
     keyfields = ['Contract Type', 'Symbol']
     expdict = expirations.dictlookupone(keyfields)
 
