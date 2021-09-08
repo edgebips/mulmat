@@ -3,8 +3,8 @@
 OLD=$(PWD)/data/cme-expirations.csv
 NEW=$(PWD)/data/cme-expirations-new.csv
 
-update:
-	mulmat-update $(OLD) $(NEW)
+update update-db:
+	mulmat-update-db $(OLD) $(NEW)
 
 diff:
 	xxdiff $(OLD) $(NEW)
