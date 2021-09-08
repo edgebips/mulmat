@@ -14,6 +14,8 @@ import click
 import petl
 from petl import Table
 
+import mulmat
+
 
 def split_month(symbol: str) -> Tuple[str, str, str]:
     match = re.match('(.*)([FGHJKMNQUVXZ])(\d{1,2})$', symbol)
@@ -111,8 +113,6 @@ def main(database: Optional[str], products: bool, months: bool):
         list_products(options)
     if months:
         list_months(options)
-
-
 
 
 if __name__ == '__main__':
