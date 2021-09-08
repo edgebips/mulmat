@@ -5,12 +5,33 @@ This is derived from the CME database.
 __copyright__ = "Copyright (C) 2021  Martin Blais"
 __license__ = "GNU GPLv2"
 
+import re
+
+
+def get_underlying(optsym: str) -> str:
+    """Given a futures options code with month/year, return the underlying.
+
+    For example, get_underlying("/OZFX21") -> "/ZFZ21".
+
+    Note that this should work with a single digit year, and for codes without a
+    slash (also returned without a slash).
+    """
+    match = re.fullmatch(r"(/?)([0-9A-Z]+)([FGHJKMNQUVXZ])(\d+)", optsym)
+    assert match, f"No match for {optsym}"
+    slash, optcode, optmonth, optyear = match.groups()
+    undercode, undermonth, offset = MONTHS[(optcode, optmonth)]
+    underyear = int(optyear) + offset
+    return f"{slash}{undercode}{undermonth}{underyear}"
+
+
 # Mapping of
 #   (option-product, option-month)
 # to
 #   (future-product, future-month, year-offset)
 # This can be used to figure out the underlying's name, month and year from a
 # futures option code.
+#
+# See the associated script for how to update.
 MONTHS = {
     ('12C', 'Z'): ('QC2', 'Z', 0),
     ('12K', 'N'): ('KNS', 'N', 0),

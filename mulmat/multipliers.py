@@ -5,8 +5,6 @@ __license__ = "GNU GPLv2"
 
 from typing import Tuple
 
-from johnny.base import config as configlib
-
 
 # NOTE(blais): If you need a CME or CBOE product that is not here, please send
 # me a patch to add in the multiplier. These just happen to be the ones I've
@@ -49,8 +47,8 @@ CME_MULTIPLIERS = {
     '/MGC'    : 10,
     '/SI'     : 5000,
     '/SIL'    : 1000,
-    '/HG'     : 25000,
-    '/QC'    : 12500,
+    '/HG'     : 25_000,
+    '/QC'     : 12_500,
     '/PA'     : 100,
     '/PL'     : 50,
 
@@ -106,15 +104,3 @@ MULTIPLIERS = {name: multiplier
                               CBOE_MULTIPLIERS,
                               SMALLEXCHANGE_MULTIPLIERS]
                for name, multiplier in mulmap.items()}
-
-
-class FutOptMonthMapper:
-    """A read-only dict mapping options month codes to futures month codes."""
-
-    def __init__(self, mapping: configlib.FutOptMonthMapping):
-        self.month_map = {
-            (m.option_product, m.option_month): (m.future_product, m.future_month)
-            for m in mapping.months}
-
-    def get(self, optcontract: str, optmonth: str) -> Tuple[str, str]:
-        return self.month_map[(optcontract, optmonth)]
