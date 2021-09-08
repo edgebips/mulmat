@@ -2,19 +2,24 @@
 
 ## Overview
 
-"Mulmat" is a Python library that maps futures option codes to their
-corresponding underlyings and expiration date. Futures options and their
+"Mulmat" is a Python library that maps **futures option codes** to their
+corresponding **underlyings** and **expiration date**. Futures options and their
 underlying futures contracts have distinct expiration dates which cannot always
 be calculated in a straightforward manner (may be affected by holidays, and are
-irregular in some products, such as ags).
+irregular in some products, such as ags). For example, the option code `/OZFX1`
+(options 5-Year T-Note treasuries) has an underlying of `/ZFZ1` and an
+expiration of `10/22/2021` (of the option itself, not of the underlying
+contract).
 
 "Mulmat" also provides a simple database of size multipliers for each product.
 
 The local database of contracts is stored in this repository as a static file
-and updated regularly by the author running the script. A script is included
-that can download a list of future contracts from the CME website. Historical
-expirations will be kept here. I started this database in August 2021; prior
-data is not available.
+and updated regularly by the author running the script. See commit history for
+the latest updates. A script is included that can download a list of fresh
+contract data from the CME website and aggregate it in the existing database, in
+order to maintain data for expired contracts. Historical expirations will be
+accumulated. I started this database in August 2021; prior data is not
+available.
 
 The Python library provides simple indexing into this library. The list of
 contracts updated in the local database by default are those commonly available
