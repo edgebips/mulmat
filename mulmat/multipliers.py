@@ -40,6 +40,7 @@ CME_MULTIPLIERS = {
 
     # Energy
     '/CL'     : 1000,
+    '/MCL'    : 100,
     '/NG'     : 10_000,
 
     # Metals
@@ -68,6 +69,10 @@ CME_MULTIPLIERS = {
     # Livestock
     '/HE'     : 400,
     '/LE'     : 400,
+
+    # Crypto/Digital Assets
+    '/BTC'    : 5,
+    '/MBT'    : 0.1,
 }
 
 # Multipliers for CBOE products.
