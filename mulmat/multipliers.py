@@ -30,17 +30,28 @@ CME_MULTIPLIERS = {
 
     # Volatility
     '/VX'     : 1000,
+    '/VXM'     : 100,
 
     # FX
     '/6A'     : 100_000,
+    '/M6A'     : 10_000,
     '/6C'     : 100_000,
     '/6B'     : 62_500,
+    '/M6B'     : 6250,
     '/6E'     : 125_000,
+    '/M6E'     : 12_500,
     '/6J'     : 12_500_000,
+
+    # Crypto
+    '/BTC'     : 5,
+    '/MBT'     : 0.1,
 
     # Energy
     '/CL'     : 1000,
+    '/MCL'     : 100,
+    '/QM'     : 500,
     '/NG'     : 10_000,
+    '/QG'     : 2500,
 
     # Metals
     '/GC'     : 100,
@@ -62,8 +73,11 @@ CME_MULTIPLIERS = {
 
     # Agricultural
     '/ZC'     : 50,
+    '/XC'     : 5,
     '/ZS'     : 50,
+    '/XK'     : 5,
     '/ZW'     : 50,
+    '/XW'     : 5,
 
     # Livestock
     '/HE'     : 400,
