@@ -41,6 +41,7 @@ CME_MULTIPLIERS = {
 
     # Energy
     '/CL'     : 1000,
+    '/QM'     : 500,
     '/MCL'    : 100,
     '/NG'     : 10_000,
 
