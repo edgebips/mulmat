@@ -30,6 +30,7 @@ CME_MULTIPLIERS = {
 
     # Volatility
     '/VX'     : 1000,
+    '/VXM'    : 100,
 
     # FX
     '/6A'     : 100_000,
