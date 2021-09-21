@@ -43,10 +43,6 @@ CME_MULTIPLIERS = {
     '/M6E'    : 12_500,
     '/6J'     : 12_500_000,
 
-    # Crypto
-    '/BTC'     : 5,
-    '/MBT'     : 0.1,
-
     # Energy
     '/CL'     : 1000,
     '/QM'     : 500,
