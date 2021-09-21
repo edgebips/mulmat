@@ -3,6 +3,7 @@
 __copyright__ = "Copyright (C) 2021  Martin Blais"
 __license__ = "GNU GPLv2"
 
+from decimal import Decimal
 from typing import Tuple
 
 
@@ -26,20 +27,20 @@ CME_MULTIPLIERS = {
     '/RTY'    : 50,
     '/M2K'    : 5,
     '/YM'     : 5,
-    '/MYM'    : 0.5,
+    '/MYM'    : '0.5',
 
     # Volatility
     '/VX'     : 1000,
-    '/VXM'     : 100,
+    '/VXM'    : 100,
 
     # FX
     '/6A'     : 100_000,
-    '/M6A'     : 10_000,
+    '/M6A'    : 10_000,
     '/6C'     : 100_000,
     '/6B'     : 62_500,
-    '/M6B'     : 6250,
+    '/M6B'    : 6250,
     '/6E'     : 125_000,
-    '/M6E'     : 12_500,
+    '/M6E'    : 12_500,
     '/6J'     : 12_500_000,
 
     # Crypto
@@ -48,8 +49,8 @@ CME_MULTIPLIERS = {
 
     # Energy
     '/CL'     : 1000,
-    '/MCL'     : 100,
     '/QM'     : 500,
+    '/MCL'    : 100,
     '/NG'     : 10_000,
     '/QG'     : 2500,
 
@@ -82,6 +83,10 @@ CME_MULTIPLIERS = {
     # Livestock
     '/HE'     : 400,
     '/LE'     : 400,
+
+    # Crypto/Digital Assets
+    '/BTC'    : 5,
+    '/MBT'    : '0.1',
 }
 
 # Multipliers for CBOE products.
@@ -113,7 +118,7 @@ SMALLEXCHANGE_MULTIPLIERS = {
 }
 
 
-MULTIPLIERS = {name: multiplier
+MULTIPLIERS = {name: Decimal(multiplier)
                for mulmap in [CME_MULTIPLIERS,
                               CBOE_MULTIPLIERS,
                               SMALLEXCHANGE_MULTIPLIERS]
