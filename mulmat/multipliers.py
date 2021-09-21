@@ -63,8 +63,11 @@ CME_MULTIPLIERS = {
 
     # Agricultural
     '/ZC'     : 50,
+    '/XC'     : 5,
     '/ZS'     : 50,
+    '/XK'     : 5,
     '/ZW'     : 50,
+    '/XW'     : 5,
 
     # Livestock
     '/HE'     : 400,
