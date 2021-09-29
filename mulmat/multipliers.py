@@ -4,7 +4,7 @@ __copyright__ = "Copyright (C) 2021  Martin Blais"
 __license__ = "GNU GPLv2"
 
 from decimal import Decimal
-from typing import Tuple
+from typing import Dict, Tuple
 
 
 # NOTE(blais): If you need a CME or CBOE product that is not here, please send
@@ -14,11 +14,11 @@ from typing import Tuple
 
 # Standard equity option contract size.
 # TODO(blais): Rename to EQUITY_OPTION_CSIZE
-OPTION_CONTRACT_SIZE = 100
+OPTION_CONTRACT_SIZE = Decimal(100)
 
 
 # Multipliers for CME products.
-CME_MULTIPLIERS = {
+CME_MULTIPLIERS = {name: Decimal(value) for name, value in {
     # Equity indices
     '/ES'     : 50,
     '/MES'    : 5,
@@ -83,10 +83,10 @@ CME_MULTIPLIERS = {
     # Crypto/Digital Assets
     '/BTC'    : 5,
     '/MBT'    : '0.1',
-}
+}.items()}
 
 # Multipliers for CBOE products.
-CBOE_MULTIPLIERS = {
+CBOE_MULTIPLIERS = {name: Decimal(value) for name, value in {
     # Indices
     'SPX'     : 100,
     'NDX'     : 100,
@@ -98,10 +98,10 @@ CBOE_MULTIPLIERS = {
     'RVX'     : 1000,
     'VXN'     : 1000,
     'VXD'     : 1000,
-}
+}.items()}
 
 # Multipliers for SmallExchange products.
-SMALLEXCHANGE_MULTIPLIERS = {
+SMALLEXCHANGE_MULTIPLIERS = {name: Decimal(value) for name, value in {
     '/S10Y'   : 100,
     '/S2Y'    : 100,
     '/S30Y'   : 100,
@@ -111,10 +111,11 @@ SMALLEXCHANGE_MULTIPLIERS = {
     '/SMO'    : 100,
     '/SPRE'   : 100,
     '/STIX'   : 100,
-}
+}.items()}
 
 
-MULTIPLIERS = {name: Decimal(multiplier)
+# Merge all the mappings.
+MULTIPLIERS = {name: multiplier
                for mulmap in [CME_MULTIPLIERS,
                               CBOE_MULTIPLIERS,
                               SMALLEXCHANGE_MULTIPLIERS]
