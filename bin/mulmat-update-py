@@ -36,7 +36,7 @@ def main(database: Optional[str]):
 
     options = (expirations
                .selecteq('Contract Type', 'Option')
-               .cut('Symbol', 'Underlying'))
+               .cut('Symbol', 'Underlying', 'Settle'))
 
     replace_file_mapping('products.py', mulmat.lists.list_products(options), 'PRODUCTS')
     replace_file_mapping('months.py', mulmat.lists.list_months(options), 'MONTHS')

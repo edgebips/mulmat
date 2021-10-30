@@ -7,18 +7,26 @@ __license__ = "Apache 2.0"
 import re
 import collections
 from os import path
+import datetime
 from typing import Any, Optional, Tuple
 
+from dateutil import parser
 import click
 import petl
 from petl import Table
 
 
-def split_month(symbol: str) -> Tuple[str, str, str]:
+def split_month(symbol: str, settle: datetime.date) -> Tuple[str, str, str]:
     match = re.match('(.*)([FGHJKMNQUVXZ])(\d{1,2})$', symbol)
     if match is None:
         raise ValueError
-    return match.groups()
+    product, month, year = match.groups()
+    if len(year) == 1:
+        decade = (settle.year % 100) - (settle.year % 10)
+        year = decade + int(year)
+    else:
+        year = int(year)
+    return product, month, year
 
 
 def list_products(options: Table):
@@ -27,9 +35,10 @@ def list_products(options: Table):
     # Calculate a mapping of option product code to corresponding underlying.
     mapping = collections.defaultdict(set)
     for rec in options.records():
+        settle = parser.parse(rec['Settle']).date()
         try:
-            option_product, _, __ = split_month(rec['Symbol'])
-            under_product, _, __ = split_month(rec['Underlying'])
+            option_product, _, __ = split_month(rec['Symbol'], settle)
+            under_product, _, __ = split_month(rec['Underlying'], settle)
         except ValueError:
             continue
         mapping[option_product].add(under_product)
@@ -53,16 +62,20 @@ def list_months(options: Table):
     """Print mapping of ((option, option-month), (underlying, underlying-month)) codes."""
 
     # Calculate a mapping of option product code to corresponding underlying.
-    mapping = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(set)))
+    mapping = collections.defaultdict(lambda: collections.defaultdict(
+        lambda: collections.defaultdict(set)))
     for rec in options.records():
+        settle = parser.parse(rec['Settle']).date()
         try:
-            oproduct, omonth, oyear = split_month(rec['Symbol'])
-            uproduct, umonth, uyear = split_month(rec['Underlying'])
+            oproduct, omonth, oyear = split_month(rec['Symbol'], settle)
+            uproduct, umonth, uyear = split_month(rec['Underlying'], settle)
         except ValueError:
             continue
-        yeardiff = int(uyear)-int(oyear)
+        yeardiff = uyear - oyear
         if yeardiff >= 10:
             continue
+        if yeardiff < 0:
+            raise ValueError(f"Invalid value for year diff: {yeardiff}; {rec}")
         mapping[uproduct][oproduct][omonth].add((umonth, yeardiff))
 
     # Check uniqueness.

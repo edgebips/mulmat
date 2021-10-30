@@ -27,6 +27,8 @@ def main(database: Optional[str], products: bool, months: bool):
 
     options = (expirations
                .selecteq('Contract Type', 'Option')
+               # Many rows don't have an underlying, filter.
+               .selecttrue('Underlying')
                .cut('Symbol', 'Underlying'))
 
     if products:
