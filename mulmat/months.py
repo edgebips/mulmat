@@ -8,6 +8,22 @@ __license__ = "GNU GPLv2"
 import re
 
 
+CODE_TO_NAME = {
+    "F": "Jan",
+    "G": "Feb",
+    "H": "Mar",
+    "J": "Apr",
+    "K": "May",
+    "M": "Jun",
+    "N": "Jul",
+    "Q": "Aug",
+    "U": "Sep",
+    "V": "Oct",
+    "X": "Nov",
+    "Z": "Dec",
+}
+
+
 def get_underlying(optsym: str) -> str:
     """Given a futures options code with month/year, return the underlying.
 

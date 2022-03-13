@@ -16,13 +16,13 @@ import petl
 from petl import Table
 
 
-def split_month(symbol: str, settle: datetime.date) -> Tuple[str, str, str]:
+def split_month(symbol: str, settle_year: int) -> Tuple[str, str, str]:
     match = re.match('(.*)([FGHJKMNQUVXZ])(\d{1,2})$', symbol)
     if match is None:
         raise ValueError
     product, month, year = match.groups()
     if len(year) == 1:
-        decade = (settle.year % 100) - (settle.year % 10)
+        decade = (settle_year % 100) - (settle_year % 10)
         year = decade + int(year)
     else:
         year = int(year)
@@ -37,8 +37,8 @@ def list_products(options: Table):
     for rec in options.records():
         settle = parser.parse(rec['Settle']).date()
         try:
-            option_product, _, __ = split_month(rec['Symbol'], settle)
-            under_product, _, __ = split_month(rec['Underlying'], settle)
+            option_product, _, __ = split_month(rec['Symbol'], settle.year)
+            under_product, _, __ = split_month(rec['Underlying'], settle.year)
         except ValueError:
             continue
         mapping[option_product].add(under_product)
@@ -67,8 +67,8 @@ def list_months(options: Table):
     for rec in options.records():
         settle = parser.parse(rec['Settle']).date()
         try:
-            oproduct, omonth, oyear = split_month(rec['Symbol'], settle)
-            uproduct, umonth, uyear = split_month(rec['Underlying'], settle)
+            oproduct, omonth, oyear = split_month(rec['Symbol'], settle.year)
+            uproduct, umonth, uyear = split_month(rec['Underlying'], settle.year)
         except ValueError:
             continue
         yeardiff = uyear - oyear

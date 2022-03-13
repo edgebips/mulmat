@@ -29,10 +29,6 @@ CME_MULTIPLIERS = {name: Decimal(value) for name, value in {
     '/YM'     : 5,
     '/MYM'    : '0.5',
 
-    # Volatility
-    '/VX'     : 1000,
-    '/VXM'    : 100,
-
     # FX
     '/6A'     : 100_000,
     '/M6A'    : 10_000,
@@ -99,6 +95,10 @@ CBOE_MULTIPLIERS = {name: Decimal(value) for name, value in {
     'RVX'     : 1000,
     'VXN'     : 1000,
     'VXD'     : 1000,
+
+    # Volatility
+    '/VX'     : 1000,
+    '/VXM'    : 100,
 }.items()}
 
 # Multipliers for SmallExchange products.
