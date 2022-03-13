@@ -17,15 +17,15 @@ from dateutil import parser, relativedelta
 _CODES = 'FGHJKMNQUVXZ'
 
 
-def read_cme_database(database: Optional[str] = None) -> Table:
+def read_cme_database(filename: Optional[str] = None) -> Table:
     """Read the CME database to as PETL table."""
-    if database is None:
+    if filename is None:
         root = path.dirname(path.dirname(__file__))
-        database = f"{root}/data/cme-expirations.csv"
-    return petl.fromcsv(database)
+        filename = f"{root}/data/cme-expirations.csv"
+    return petl.fromcsv(filename)
 
 
-def get_expirations_lookup(database: Table) -> dict[str, Record]:
+def get_expirations_lookup(database: Table) -> Mapping[str, Record]:
     """Create a data structure to lookup options expirations."""
     return (database
             .selecteq('Contract Type', 'Option')
