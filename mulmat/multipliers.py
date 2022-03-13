@@ -85,13 +85,14 @@ CME_MULTIPLIERS = {name: Decimal(value) for name, value in {
     '/MBT'    : '0.1',
 }.items()}
 
-# Multipliers for CBOE products.
+# Multipliers for CBOE index products.
 CBOE_MULTIPLIERS = {name: Decimal(value) for name, value in {
     # Indices
     'SPX'     : 100,
     'NDX'     : 100,
     'RUT'     : 100,
     'DJI'     : 100,
+    'XSP'     : 10,
 
     # Volatility
     'VIX'     : 100,
