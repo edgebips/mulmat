@@ -84,21 +84,26 @@ CME_MULTIPLIERS = {name: Decimal(value) for name, value in {
 # Multipliers for CBOE index products.
 CBOE_MULTIPLIERS = {name: Decimal(value) for name, value in {
     # Indices
-    'SPX'     : 100,
-    'NDX'     : 100,
-    'RUT'     : 100,
-    'DJI'     : 100,
-    'XSP'     : 10,
+    'SPX'  : 100,
+    'SPXW' : 100,
+    'NDX'  : 100,
+    'NDXP' : 100,
+    'RUT'  : 100,
+    'RUTW' : 100,
+    'DJI'  : 100,
+    'DJIW' : 100,
+    'XSP'  : 10,
+    'XSPW' : 10,
 
     # Volatility
-    'VIX'     : 100,
-    'RVX'     : 1000,
-    'VXN'     : 1000,
-    'VXD'     : 1000,
+    'VIX'  : 100,
+    'RVX'  : 1000,
+    'VXN'  : 1000,
+    'VXD'  : 1000,
 
     # Volatility
-    '/VX'     : 1000,
-    '/VXM'    : 100,
+    '/VX'  : 1000,
+    '/VXM' : 100,
 }.items()}
 
 # Multipliers for SmallExchange products.
