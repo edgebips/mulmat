@@ -47,7 +47,7 @@ def list_products(options: Table):
     for option, underlyings in list(mapping.items()):
         if len(underlyings) > 1:
             raise ValueError(
-                f"Multivalent mapping from options to futures: {option} {underlying}")
+                f"Multivalent mapping from option {option} to futures: {underlyings}")
         mapping[option] = next(iter(underlyings))
 
     return dict(mapping)
@@ -77,6 +77,8 @@ def list_months(options: Table):
         if yeardiff < 0:
             raise ValueError(f"Invalid value for year diff: {yeardiff}; {rec}")
         mapping[uproduct][oproduct][omonth].add((umonth, yeardiff))
+        if oproduct == 'BW4':
+            print(rec)
 
     # Check uniqueness.
     for item in mapping.items():
@@ -85,7 +87,8 @@ def list_months(options: Table):
             for omonth, umonths in omonths.items():
                 if len(umonths) > 1:
                     raise ValueError(
-                        f"Multivalent mapping from options to futures: {item}")
+                        f"Too many months mapped for futures {uproduct}, "
+                        f"option {oproduct}: option-month={omonth} :: future-months={umonths}")
                 umonth, yeardiff = only(umonths)
                 if yeardiff != 0:
                     pass # print(uproduct, oproduct, omonth, umonth, yeardiff)
