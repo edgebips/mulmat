@@ -8,6 +8,7 @@ import re
 import collections
 from os import path
 import datetime
+import logging
 from typing import Any, Optional, Tuple
 
 from dateutil import parser
@@ -76,25 +77,10 @@ def list_months(options: Table):
             continue
         if yeardiff < 0:
             raise ValueError(f"Invalid value for year diff: {yeardiff}; {rec}")
-        mapping[uproduct][oproduct][omonth].add((umonth, yeardiff))
-        if oproduct == 'BW4':
-            print(rec)
-
-    # Check uniqueness.
-    for item in mapping.items():
-        uproduct, oproducts = item
-        for oproduct, omonths in oproducts.items():
-            for omonth, umonths in omonths.items():
-                if len(umonths) > 1:
-                    raise ValueError(
-                        f"Too many months mapped for futures {uproduct}, "
-                        f"option {oproduct}: option-month={omonth} :: future-months={umonths}")
-                umonth, yeardiff = only(umonths)
-                if yeardiff != 0:
-                    pass # print(uproduct, oproduct, omonth, umonth, yeardiff)
+        mapping[uproduct][oproduct][omonth].add((umonth, yeardiff, oyear))
 
     # Remove default dicts.
-    mapping = {key1: {key2: {key3: only(value3)
+    mapping = {key1: {key2: {key3: value3
                              for key3, value3 in value2.items()}
                       for key2, value2 in value1.items()}
                for key1, value1 in mapping.items()}
@@ -103,7 +89,14 @@ def list_months(options: Table):
     option_under_mapping = {}
     for uproduct, oproducts in mapping.items():
         for oproduct, omonths in oproducts.items():
-            for omonth, (umonth, yeardiff) in omonths.items():
-                option_under_mapping[(oproduct, omonth)] = (uproduct, umonth, yeardiff)
+            for omonth, umonths in omonths.items():
+                smonths = sorted({(umonth, yeardiff) for umonth, yeardiff, oyear in umonths})
+                if len(smonths) > 1:
+                    for umonth, yeardiff, oyear in umonths:
+                        option_under_mapping[(oproduct, omonth, oyear)] = (uproduct, umonth, yeardiff)
+                    option_under_mapping[(oproduct, omonth)] = None  # Mark as impossible.
+                else:
+                    (umonth, yeardiff) = only(smonths)
+                    option_under_mapping[(oproduct, omonth)] = (uproduct, umonth, yeardiff)
 
     return option_under_mapping
