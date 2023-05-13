@@ -4,13 +4,15 @@
 __copyright__ = "Copyright (C) 2021  Martin Blais"
 __license__ = "Apache 2.0"
 
+from os import path
+import itertools
 import logging
 import os
-import time
-import itertools
-import tempfile
 import pathlib
-from os import path
+import pprint
+import re
+import tempfile
+import time
 
 import click
 from selenium import webdriver
@@ -39,140 +41,91 @@ def retry_click_until(widget, *args):
             waiter.until(EC.staleness_of(action))
 
 
-def fetch_expirations(destination_dir: str, headless: bool) -> Table:
+def fetch_expirations(tmpdir: str, headless: bool) -> list[pathlib.Path]:
     """Fetch expirations for a subset of futures products to the given database.
     Overrides prior entries if they exist.
     The database is keyed by (contract-type, symbol).
+    Returns the list of filenames.
     """
 
-    with tempfile.TemporaryDirectory(prefix="mulmat.", dir="/home/blais") as tmpdir:
-        logging.info(f"Storing temporary files to {tmpdir}")
+    # {2023-05-13} Setting the default download directory doesn't work anymore.
+    # Chrome/Selenium is a shitshow. There's about a million people with a
+    # million solutions online. Couldn't get it to work under 30mins of
+    # fiddling. F*ck it, let's use the Downloads direcotry.
+    # with tempfile.TemporaryDirectory(prefix="mulmat.", dir="/home/blais") as tmpdir:
+    logging.info(f"Deleting previous files")
+    for p in get_expirations_filenames(tmpdir):
+        p.unlink()
 
-        # Create driver.
-        opts = options.Options()
-        opts.headless = headless
-        opts.prompt_for_download = False
-        prefs = {
-            # Allow multiple downloads; disable the corresponding popup.
-            "profile.default_content_setting_values.automatic_downloads": 1,
-            "default_content_settings.multiple-automatic-downloads": 1,
-            # Set the download directory.
-            "download.default_directory": tmpdir,
-            # Popup that disappears. See
-            # https://stackoverflow.com/questions/69710309/selenium-test-ok-cancel-popup-disappearing-immediately
-            "unexpectedAlertBehaviour": "ignore",
-        }
-        opts.add_experimental_option("prefs", prefs)
-        driver = webdriver.Chrome(executable_path="chromedriver", options=opts)
+    logging.info(f"Storing temporary files to {tmpdir}")
 
-        # Open the page and click away the "accept cookies" button
-        # (id:pardotCookieButton).
-        driver.get(URL)
+    # Create driver.
+    opts = options.Options()
+    opts.headless = headless
+    opts.prompt_for_download = False
+    prefs = {
+        ## # Allow multiple downloads; disable the corresponding popup.
+        ## "profile.default_content_setting_values.automatic_downloads": 1,
+        ## "default_content_settings.multiple-automatic-downloads": 1,
+        #
+        # Set the download directory.
+        # "download.default_directory": tmpdir,
+        # "safefile.default_directory": tmpdir,
+        # "directory_upgrade": True,
+        # "extensions_to_open": "",
+        # "safebrowsing.enabled": True,
+        #
+        # Popup that disappears. See
+        # https://stackoverflow.com/questions/69710309/selenium-test-ok-cancel-popup-disappearing-immediately
+        ## "unexpectedAlertBehaviour": "ignore",
+    }
+    opts.add_experimental_option("prefs", prefs)
+    driver = webdriver.Chrome(executable_path="chromedriver", options=opts)
 
-        accept = driver.find_element(By.ID, "onetrust-accept-btn-handler")
-        # accept = driver.find_element(By.XPATH, '//a[text()="Accept All Cookies"]')
-        accept.click()
+    # Open the page and click away the "accept cookies" button
+    # (id:pardotCookieButton).
+    driver.get(URL)
 
-        # Find the iframe and switch to it.
-        # Note: This used to get the frame id; stopped working in 2/22.
-        iframe = 0
-        wait(driver, 10).until(EC.frame_to_be_available_and_switch_to_it(iframe))
+    accept = driver.find_element(By.ID, "onetrust-accept-btn-handler")
+    # accept = driver.find_element(By.XPATH, '//a[text()="Accept All Cookies"]')
+    accept.click()
 
-        # Find the tabs, and iterate through them.
-        ul = driver.find_element(By.CLASS_NAME, "cme-tabs")
-        titles = [a.get_attribute("title") for a in ul.find_elements(By.TAG_NAME, "a")]
-        tab_filenames = []
+    # Find the iframe and switch to it.
+    # Note: This used to get the frame id; stopped working in 2/22.
+    iframe = 0
+    wait(driver, 10).until(EC.frame_to_be_available_and_switch_to_it(iframe))
 
-        if 0:
-            # This does not work anymore. Resorting to manual process (whatever).
+    # Find the tabs, and iterate through them.
+    ul = driver.find_element(By.CLASS_NAME, "cme-tabs")
+    titles = [a.get_attribute("title") for a in ul.find_elements(By.TAG_NAME, "a")]
+    tab_filenames = []
 
-            delay_secs = 1
-            num_retries = 5
-            for title in titles:
-                for _ in range(num_retries):
-                    # TODO(blais): Make those unique and temporary named.
-                    tab_filename = f"{destination_dir}/mulmat-{title}.csv"
-                    tab_filenames.append(tab_filename)
-                    if path.exists(tab_filename):
-                        logging.info(f"File {tab_filename} already exists; skipping")
-                        continue
+    # Wait for some input.
+    print("Press any key when done")
+    input()
 
-                    # Select the tab.
-                    ul = driver.find_element(By.CLASS_NAME, "cme-tabs")
-                    retry_click_until(ul, (By.XPATH, f'//a[@title="{title}"]'))
-                    logging.info(f'Processing tab: "{title}"')
 
-                    # Find the Actions menu; select the export item in the hidden popup
-                    # submenu. Note: We may be able to get away with the Actions menu.
-                    retry_click_until(driver, (By.XPATH, '//a[@title="Actions"]'))
-
-                    time.sleep(delay_secs)
-
-                    popup = wait(driver, 10).until(
-                        EC.visibility_of_element_located(
-                            (By.CLASS_NAME, "expirationbar-popup")
-                        )
-                    )
-
-                    time.sleep(delay_secs)
-
-                    retry_click_until(
-                        popup, (By.XPATH, '//div[text()="Export Expirations"]')
-                    )
-
-                    time.sleep(delay_secs)
-
-                    # Wait for the file to be downloaded.
-                    while True:
-                        filenames = [
-                            fn
-                            for fn in os.listdir(tmpdir)
-                            if not fn.endswith(".crdownload")
-                        ]
-                        if filenames:
-                            break
-                    assert len(filenames) == 1
-                    filename = path.join(tmpdir, filenames[0])
-
-                    if os.path.getsize(filename) > 0:
-                        break
-                    os.remove(filename)
-                else:
-                    raise
-
-                # Move it somewhere persistent until the end of this function.
-                os.rename(filename, tab_filename)
-
-                # Remove the file.
-                logging.info(f'Done with "{title}"')
-
-        else:
-            # Wait for some input.
-            print("Press any key when done")
-            input()
-
-            paths = sorted(
-                list(pathlib.Path(tmpdir).iterdir()),
-                key=lambda p: p.stat().st_mtime,
-            )
-            filenames = [str(p.absolute()) for p in paths]
-
-            for index, filename in enumerate(filenames):
-                if os.path.getsize(filename) == 0:
-                    continue
-                tab_filename = f"{destination_dir}/{index}.csv"
-                tab_filenames.append(tab_filename)
-                os.rename(filename, tab_filename)
-
-        return tab_filenames
+def get_expirations_filenames(directory: str) -> list[str]:
+    return sorted(
+        [
+            p.absolute()
+            for p in pathlib.Path(directory).iterdir()
+            if re.match("Expirations.*\.csv$", p.name)
+        ],
+        key=lambda p: p.stat().st_mtime
+    )
 
 
 @click.command()
+@click.option("--no-fetch", default=False)
 @click.option("--headless/--no-headless", default=False)
 @click.argument("old-database")
 @click.argument("new-database")
-def main(old_database: str, new_database: str, headless: bool):
+def main(no_fetch: bool, old_database: str, new_database: str, headless: bool):
     logging.basicConfig(level=logging.INFO, format="%(levelname)-8s: %(message)s")
+
+    tmpdir = os.path.expanduser("~/Downloads")
+    logging.info(f"Using downloads directory {tmpdir}")
 
     logging.info("Read prior database of expirations.")
     keyfields = ["Contract Type", "Symbol"]
@@ -180,23 +133,28 @@ def main(old_database: str, new_database: str, headless: bool):
         petl.fromcsv(old_database) if path.exists(old_database) else petl.empty()
     )
 
-    with tempfile.TemporaryDirectory(prefix="mulmat.") as tmpdir:
-        logging.info("Fetching new expirations.")
-        filenames = fetch_expirations(tmpdir, headless)
-        tables = [petl.fromcsv(filename) for filename in filenames]
-        new_expirations = petl.cat(*tables)
+    logging.info("Fetching new expirations.")
+    if not no_fetch:
+        fetch_expirations(tmpdir, headless)
+    filenames = get_expirations_filenames(tmpdir)
+    tables = [petl.fromcsv(filename) for filename in filenames]
+    new_expirations = petl.cat(*tables)
 
-        logging.info("Override old values from the original db.")
-        expirations_dict = expirations.lookupone(keyfields)
-        for rec in new_expirations.records():
-            key = (rec["Contract Type"], rec["Symbol"])
-            expirations_dict[key] = tuple(rec)
-        new_expirations = petl.wrap(
-            itertools.chain([petl.header(expirations)], expirations_dict.values())
-        ).sort(keyfields)
+    logging.info("Override old values from the original db.")
+    expirations_dict = expirations.lookupone(keyfields)
+    for rec in new_expirations.records():
+        key = (rec["Contract Type"], rec["Symbol"])
+        expirations_dict[key] = tuple(rec)
+    new_expirations = petl.wrap(
+        itertools.chain([petl.header(expirations)], expirations_dict.values())
+    ).sort(keyfields)
 
-        logging.info("Write out the new file (for comparison).")
-        new_expirations.tocsv(new_database)
+    logging.info("Write out the new file (for comparison).")
+    new_expirations.tocsv(new_database)
+
+    logging.info("Cleaning up obsoleted files.")
+    for p in get_expirations_filenames(tmpdir):
+        p.unlink()
 
 
 if __name__ == "__main__":
