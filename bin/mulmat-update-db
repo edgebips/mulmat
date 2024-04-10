@@ -80,7 +80,8 @@ def fetch_expirations(tmpdir: str, headless: bool) -> list[pathlib.Path]:
         ## "unexpectedAlertBehaviour": "ignore",
     }
     opts.add_experimental_option("prefs", prefs)
-    driver = webdriver.Chrome(executable_path="chromedriver", options=opts)
+    service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+    driver = webdriver.Chrome(options=opts, service=service)
 
     # Open the page and click away the "accept cookies" button
     # (id:pardotCookieButton).
