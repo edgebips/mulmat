@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+"""Ingest downloaded futures expirations and update the local file database.
+"""
+__copyright__ = "Copyright (C) 2021  Martin Blais"
+__license__ = "Apache 2.0"
+
+import logging
+import os
+import click
+from mulmat import cme
+
+
+@click.command()
+@click.option("--download-dir", default="~/Downloads", help="Directory where files were downloaded")
+@click.option("--keep-files", is_flag=True, default=False, help="Do not delete the downloaded files after ingestion")
+@click.argument("old-database")
+@click.argument("new-database")
+def main(download_dir: str, keep_files: bool, old_database: str, new_database: str):
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-8s: %(message)s")
+    download_dir = os.path.expanduser(download_dir)
+    cme.ingest_expirations(download_dir, old_database, new_database, keep_files)
+
+
+if __name__ == "__main__":
+    main()

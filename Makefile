@@ -6,9 +6,16 @@
 OLD=$(PWD)/data/cme-expirations.csv
 NEW=$(PWD)/data/cme-expirations-new.csv
 
+# Fetch new expirations from CME.
+fetch:
+	mulmat-fetch-expirations
+
+# Ingest downloaded files into the database.
+ingest:
+	mulmat-ingest-expirations $(OLD) $(NEW)
+
 # Update the local CSV database to a temporary file.
-update-db:
-	mulmat-update-db $(OLD) $(NEW)
+update-db: fetch ingest
 
 # Visually inspect the differences/updates.
 diff:

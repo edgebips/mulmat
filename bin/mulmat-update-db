@@ -4,251 +4,10 @@
 __copyright__ = "Copyright (C) 2021  Martin Blais"
 __license__ = "Apache 2.0"
 
-from os import path
-import itertools
 import logging
 import os
-import pathlib
-import pprint
-import re
-import tempfile
-import time
-
 import click
-from selenium import webdriver
-from selenium.webdriver.chrome import options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait as wait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import StaleElementReferenceException
-from petl import Table
-import petl
-
-
-URL = "https://www.cmegroup.com/tools-information/quikstrike/product-expiration-browser.html"
-
-
-NUM_RETRIES = 5
-
-
-def retry_click_until(widget, *args):
-    waiter = wait(widget, 8)
-    for _ in range(NUM_RETRIES):
-        try:
-            action = waiter.until(EC.element_to_be_clickable(*args))
-            return action.click()
-        except StaleElementReferenceException:
-            waiter.until(EC.staleness_of(action))
-
-
-def fetch_expirations(tmpdir: str, headless: bool, username: str = None, password: str = None) -> list[pathlib.Path]:
-    """Fetch expirations for a subset of futures products to the given database.
-    Overrides prior entries if they exist.
-    The database is keyed by (contract-type, symbol).
-    Returns the list of filenames.
-    """
-
-    # {2023-05-13} Setting the default download directory doesn't work anymore.
-    # Chrome/Selenium is a shitshow. There's about a million people with a
-    # million solutions online. Couldn't get it to work under 30mins of
-    # fiddling. F*ck it, let's use the Downloads direcotry.
-    # with tempfile.TemporaryDirectory(prefix="mulmat.", dir="/home/blais") as tmpdir:
-    logging.info(f"Deleting previous files")
-    for p in get_expirations_filenames(tmpdir):
-        p.unlink()
-
-    logging.info(f"Storing temporary files to {tmpdir}")
-
-    # Create driver.
-    opts = options.Options()
-    if headless:
-        opts.add_argument("--headless")
-    opts.prompt_for_download = False
-    prefs = {
-        ## # Allow multiple downloads; disable the corresponding popup.
-        ## "profile.default_content_setting_values.automatic_downloads": 1,
-        ## "default_content_settings.multiple-automatic-downloads": 1,
-        #
-        # Set the download directory.
-        # "download.default_directory": tmpdir,
-        # "safefile.default_directory": tmpdir,
-        # "directory_upgrade": True,
-        # "extensions_to_open": "",
-        # "safebrowsing.enabled": True,
-        #
-        # Popup that disappears. See
-        # https://stackoverflow.com/questions/69710309/selenium-test-ok-cancel-popup-disappearing-immediately
-        ## "unexpectedAlertBehaviour": "ignore",
-    }
-    opts.add_experimental_option("prefs", prefs)
-    service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
-    driver = webdriver.Chrome(options=opts, service=service)
-
-    # Perform login if credentials are provided.
-    if username and password:
-        logging.info("Logging into CME Group...")
-        driver.get("https://login.cmegroup.com/")
-        # Wait for either "user" or "username" to appear
-        wait(driver, 20).until(
-            lambda d: d.find_elements(By.ID, "user") or d.find_elements(By.ID, "username")
-        )
-
-        # Try to find user field
-        user_field = None
-        for uid in ["user", "username"]:
-            try:
-                user_field = driver.find_element(By.ID, uid)
-                break
-            except:
-                continue
-        if user_field:
-            user_field.send_keys(username)
-
-        # Try to find password field
-        pwd_field = None
-        for pid in ["pwd", "password"]:
-            try:
-                pwd_field = driver.find_element(By.ID, pid)
-                break
-            except:
-                continue
-        if pwd_field:
-            pwd_field.send_keys(password)
-
-        # Try to find login button
-        login_btn = None
-        for bid in ["loginBtn", "login-btn"]:
-            try:
-                login_btn = driver.find_element(By.ID, bid)
-                break
-            except:
-                continue
-
-        if not login_btn:
-            try:
-                login_btn = driver.find_element(By.XPATH, "//button[contains(text(), 'Log In') or contains(text(), 'LOG IN')]")
-            except:
-                 login_btn = driver.find_element(By.XPATH, "//input[@type='submit']")
-
-        if login_btn:
-            login_btn.click()
-            logging.info("Login button clicked, waiting for confirmation (up to 120s)...")
-            # Wait for login to complete and redirect away from login pages
-            # Increased timeout to 120 seconds to allow for MFA or slow redirects.
-            wait(driver, 120).until(
-                lambda d: "login.cmegroup.com" not in d.current_url and "saml_login" not in d.current_url
-            )
-            logging.info(f"Login confirmed, current URL: {driver.current_url}")
-        else:
-            logging.error("Could not find login button.")
-
-        # Give some time for cookies to settle and session to be fully established
-        logging.info("Waiting 10 seconds for session to settle...")
-        time.sleep(10)
-
-    # Open the page and click away the "accept cookies" button
-    # (id:pardotCookieButton).
-    logging.info(f"Navigating to {URL}")
-    driver.get(URL)
-
-    try:
-        accept = wait(driver, 10).until(EC.element_to_be_clickable((By.ID, "onetrust-accept-btn-handler")))
-        accept.click()
-        time.sleep(1)
-    except:
-        logging.info("Accept cookies button not found or already clicked.")
-
-    # Check if we are logged in.
-    if "Logout" not in driver.page_source and "Log Out" not in driver.page_source:
-         logging.warning("Does not appear to be logged in at the expirations page.")
-         # If we were supposed to be logged in, maybe wait a bit more?
-         time.sleep(5)
-
-    # Find the iframe and switch to it.
-    logging.info("Searching for the correct QuikStrike iframe...")
-    wait(driver, 30).until(EC.presence_of_element_located((By.TAG_NAME, "iframe")))
-    iframes = driver.find_elements(By.TAG_NAME, "iframe")
-    
-    found_qs = False
-    for i, frame in enumerate(iframes):
-        try:
-            src = frame.get_attribute("src")
-            logging.info(f"Checking iframe {i}: {src}")
-            driver.switch_to.frame(frame)
-            time.sleep(1)
-            # Try to find cme-tabs in this iframe
-            tabs = driver.find_elements(By.CLASS_NAME, "cme-tabs")
-            if tabs:
-                 logging.info(f"Found cme-tabs in iframe {i}")
-                 found_qs = True
-                 break
-            driver.switch_to.default_content()
-        except Exception as e:
-            logging.warning(f"Error checking iframe {i}: {e}")
-            driver.switch_to.default_content()
-            continue
-            
-    if not found_qs:
-         logging.error("Could not find the QuikStrike iframe containing tabs.")
-         driver.quit()
-         return
-
-    # Find the tabs, and iterate through them.
-    logging.info("Waiting for tabs to appear...")
-    wait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, "cme-tabs")))
-    ul = driver.find_element(By.CLASS_NAME, "cme-tabs")
-    links = ul.find_elements(By.TAG_NAME, "a")
-    
-    tab_filenames = []
-    # We use a fixed list of titles to process to avoid stale elements
-    tab_titles = [a.get_attribute("title") for a in links]
-    logging.info(f"Found tabs: {tab_titles}")
-    
-    for title in tab_titles:
-        logging.info(f"Processing tab: {title}")
-        # Re-find the tab by title
-        try:
-            ul = wait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "cme-tabs")))
-            tab = ul.find_element(By.XPATH, f".//a[@title='{title}']")
-            tab.click()
-            time.sleep(3) # Wait for tab content to load
-            
-            # Look for download link - try multiple possible IDs/classes
-            download_btn = None
-            for selector in ["btnExportToExcel", "btnExportToCSV", ".export-link"]:
-                try:
-                    if selector.startswith("."):
-                        download_btn = driver.find_element(By.CLASS_NAME, selector[1:])
-                    else:
-                        download_btn = driver.find_element(By.ID, selector)
-                    if download_btn.is_displayed():
-                        break
-                except:
-                    continue
-            
-            if download_btn:
-                logging.info(f"Clicking download button for {title}")
-                download_btn.click()
-                # Wait for download to start
-                time.sleep(5)
-            else:
-                logging.error(f"Could not find download button for {title}")
-        except Exception as e:
-            logging.error(f"Error processing tab {title}: {e}")
-
-    logging.info("Done fetching. Closing driver.")
-    driver.quit()
-
-
-def get_expirations_filenames(directory: str) -> list[str]:
-    return sorted(
-        [
-            p.absolute()
-            for p in pathlib.Path(directory).iterdir()
-            if re.match(r"Expirations.*\.csv$", p.name)
-        ],
-        key=lambda p: p.stat().st_mtime
-    )
+from mulmat import cme
 
 
 @click.command()
@@ -257,10 +16,11 @@ def get_expirations_filenames(directory: str) -> list[str]:
 @click.option("--username", help="CME Group username")
 @click.option("--password", help="CME Group password")
 @click.option("--credentials-file", type=click.Path(exists=True), help="CME Group credentials file (two lines: username, password)")
+@click.option("--download-dir", default="~/Downloads", help="Directory for temporary files")
 @click.argument("old-database")
 @click.argument("new-database")
 def main(no_fetch: bool, old_database: str, new_database: str, headless: bool,
-         username: str, password: str, credentials_file: str):
+         username: str, password: str, credentials_file: str, download_dir: str):
     logging.basicConfig(level=logging.INFO, format="%(levelname)-8s: %(message)s")
 
     if credentials_file:
@@ -273,40 +33,12 @@ def main(no_fetch: bool, old_database: str, new_database: str, headless: bool,
                 logging.error(f"Credentials file {credentials_file} must have at least two lines.")
                 return
 
-    tmpdir = os.path.expanduser("~/Downloads")
-    logging.info(f"Using downloads directory {tmpdir}")
+    tmpdir = os.path.expanduser(download_dir)
 
-    logging.info("Read prior database of expirations.")
-    keyfields = ["Contract Type", "Symbol"]
-    expirations = (
-        petl.fromcsv(old_database) if path.exists(old_database) else petl.empty()
-    )
-
-    logging.info("Fetching new expirations.")
     if not no_fetch:
-        fetch_expirations(tmpdir, headless, username, password)
-    filenames = get_expirations_filenames(tmpdir)
-    if not filenames:
-        logging.error("No files were downloaded. Check the logs for errors during fetching.")
-        return
-    tables = [petl.fromcsv(filename) for filename in filenames]
-    new_expirations = petl.cat(*tables)
+        cme.fetch_expirations(tmpdir, headless, username, password)
 
-    logging.info("Override old values from the original db.")
-    expirations_dict = expirations.lookupone(keyfields)
-    for rec in new_expirations.records():
-        key = (rec["Contract Type"], rec["Symbol"])
-        expirations_dict[key] = tuple(rec)
-    new_expirations = petl.wrap(
-        itertools.chain([petl.header(expirations)], expirations_dict.values())
-    ).sort(keyfields)
-
-    logging.info("Write out the new file (for comparison).")
-    new_expirations.tocsv(new_database)
-
-    logging.info("Cleaning up obsoleted files.")
-    for p in get_expirations_filenames(tmpdir):
-        p.unlink()
+    cme.ingest_expirations(tmpdir, old_database, new_database)
 
 
 if __name__ == "__main__":

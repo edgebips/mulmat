@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+"""Download new futures expirations from CME Group.
+"""
+__copyright__ = "Copyright (C) 2021  Martin Blais"
+__license__ = "Apache 2.0"
+
+import logging
+import os
+import click
+from mulmat import cme
+
+
+@click.command()
+@click.option("--headless/--no-headless", default=False)
+@click.option("--username", help="CME Group username")
+@click.option("--password", help="CME Group password")
+@click.option("--credentials-file", type=click.Path(exists=True), help="CME Group credentials file (two lines: username, password)")
+@click.option("--download-dir", default="~/Downloads", help="Directory to download files to")
+def main(headless: bool, username: str, password: str, credentials_file: str, download_dir: str):
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-8s: %(message)s")
+
+    if credentials_file:
+        with open(credentials_file) as infile:
+            lines = infile.read().splitlines()
+            if len(lines) >= 2:
+                username = lines[0].strip()
+                password = lines[1].strip()
+            else:
+                logging.error(f"Credentials file {credentials_file} must have at least two lines.")
+                return
+
+    tmpdir = os.path.expanduser(download_dir)
+    cme.fetch_expirations(tmpdir, headless, username, password)
+
+
+if __name__ == "__main__":
+    main()
